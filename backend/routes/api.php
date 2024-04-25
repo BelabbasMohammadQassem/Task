@@ -1,26 +1,20 @@
 <?php
 
+use App\Http\Controllers\TaskController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\TaskController;
 
-Route::get('/user', function (Request $request) {
+/*Route::get('/user', function (Request $request) {
     return $request->user();
-})->middleware('auth:sanctum');
+})->middleware('auth:sanctum');*/
 
-Route::get('/api/tasks', [TaskController::class, 'index']);
+/* Il faut passer systématiquement par la commande
+php artisan install:api (vérifier que la ligne api est bien présente dans le fichier bootstrap/app.php) */
 
-// Détail d'un film
-// {id} => paramètre dynamique (qui remplace Altorouter -> [i:id])
-// le where me permet de venir spécifier via une regex (une expression régulière) le format de la valeur attendue
+// On est déjà dans le fichier api donc on peut enlever le /api
+
+Route::get('/tasks', [TaskController::class, 'list']);
 Route::get('/tasks/{id}', [TaskController::class, 'show'])->where('id', '[0-9]+');
-
-
-// Créer un task (/api/movies dans les faits puisqu'il est dans api.php)
-Route::post('/tasks', [TaskController::class, 'create']);
-
-// Mettre à jour un film
+Route::post('/tasks', [TaskController::class, 'store']);
 Route::put('/tasks/{id}', [TaskController::class, 'update'])->where('id', '[0-9]+');
-
-// Supprimer un task
 Route::delete('/tasks/{id}', [TaskController::class, 'delete'])->where('id', '[0-9]+');

@@ -1,99 +1,121 @@
 <?php
-
 namespace App\Http\Controllers;
-use App\Models\Tasks;
+
+use App\Models\Task;
+use Exception;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-
-
+use Illuminate\Http\Response;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class TaskController extends Controller {
-    public function index(){
-        $tasks = Tasks::all();
+    public function list(): JsonResponse {
+        // on cherche la liste des tasks
+        $tasks = Task::all();
 
+        // on retourne la liste des tasks (on est pas obligé de mettre response)
+        // par défaut, Laravel retourne les données en JSON
         return response()->json($tasks, 200);
     }
 
-    public function show($id)
-    {
-        // Rechercher les données d'un film
-        // SELECT * FROM movies WHERE id = $id
-        try {
-            $task = Tasks::findOrFail($id);
-        } catch (\Exception $e) {
-            return response()->json(['message' => 'Tasks not found'], 404);
+    public function show(int $id): JsonResponse {
+        // on cherche la task qui a l'id $id
+        $task = Task::find($id);
+
+        // si la task n'existe pas (on peut aussi utiliser directement la méthode findOrFail)
+        if ($task === null) {
+            // on retourne une erreur 404
+            return response()->json(['error' => 'Task not found'], 404);
         }
 
+        // on retourne la task
         return response()->json($task, 200);
     }
 
-
-    // Update
-    public function create(Request $request)
-    {
-        // Je veux valider les données reçues
+    // l'objet Request va être injecté automatiquement par Laravel dans le paramètre (injection de dépendances)
+    // request contiendra automatiquement toutes les valeurs de $_POST, $_GET, et $_REQUEST
+    public function store(Request $request): JsonResponse {
+        // Valider les données
         try {
             $request->validate([
-                // champs title du movie (en bdd)
-                'title' => 'required|min:3|max:255'
+                'title' => 'required|min:10|max:255',
             ]);
-        } catch(\Exception $e) {
-            // ce bloc sera executé uniquement si la méthode validate throw une exception
-            return response()->json(['message' => 'Invalid data'], 400);
+        } catch(Exception $e) {
+            return response()->json(['error' => 'Validation error'], 404);
         }
 
-        // Créer un film
-        $title = new Tasks();
-        $title->title = $request->get('title');
-        $title->save();
+        // Récupérer les données (ici du body de la request)
+        $title = $request->get('title');
 
-        // ici je m'attends à récupérer également l'id généré automatiquement par la bdd
-        return response()->json($title, 201);
+        // On va créer la donnée en base
+        $task = new Task();
+
+        // On lui passe les data
+        $task->title = $title;
+
+        // On sauvegarde
+        // Oups : j'avais mis create à la place de save :)
+        $task->save();
+
+        // Récupérer les informations de la requête
+        // Statut 201 : tâche a bien été créée
+        return response()->json($task, 201);
     }
 
-    // mettre à jour
-
-    public function update(Request $request, $id)
-    {
-        // Rechercher les données d'un film
-        // SELECT * FROM movies WHERE id = $id
+    /**
+     * Met à jour une tâche
+     *
+     * @param integer $id L'identifiant de la tâche
+     * @param Request $request Les données de la requête
+     * @return JsonResponse La tâche mise à jour
+     */
+    public function update(int $id, Request $request): JsonResponse {
+        // on cherche la task qui a l'id $id
         try {
-            $titles = Tasks::findOrFail($id);
-        } catch (\Exception $e) {
-            return response()->json(['message' => 'Tasks not found'], 404);
+            $task = Task::findOrFail($id);
+        } catch(Exception $e) {
+            return response()->json(['error' => 'Task not found'], SymfonyResponse::HTTP_NOT_FOUND);
         }
 
-        // Je veux valider les données reçues
+        // Valider les données
         try {
             $request->validate([
-                // champs title du movie (en bdd)
-                'title' => 'required|min:3|max:255'
+                'title' => 'required|min:10|max:255',
             ]);
-        } catch(\Exception $e) {
-            // ce bloc sera executé uniquement si la méthode validate throw une exception
-            return response()->json(['message' => 'Invalid data'], 400);
+        } catch(Exception $e) {
+            return response()->json(['error' => 'Validation error'], SymfonyResponse::HTTP_BAD_REQUEST);
         }
 
-        // Mettre à jour un film
-        $titles->title = $request->get('title');
-        $titles->save();
+        // Récupérer les données (ici du body de la request)
+        $title = $request->get('title');
 
-        return response()->json($titles, 200);
+        // On lui passe les data
+        $task->title = $title;
+
+        // On sauvegarde
+        $task->save();
+
+        // Récupérer les informations de la requête
+        // Statut 200 : tâche a bien été modifiée
+        /*
+            SymfonyResponse::HTTP_OK peut remplacer le status code 200
+        */
+        return response()->json($task, SymfonyResponse::HTTP_OK);
     }
 
-    public function delete($id)
-    {
-        // Rechercher les données d'un film
-        // SELECT * FROM movies WHERE id = $id
+    public function delete(int $id): JsonResponse {
+        // on cherche la task qui a l'id $id
         try {
-            $taskstitle = Tasks::findOrFail($id);
-        } catch (\Exception $e) {
-            return response()->json(['message' => 'Tasks not found'], 404);
+            $task = Task::findOrFail($id);
+        } catch(Exception $e) {
+            return response()->json(['error' => 'Task not found'], SymfonyResponse::HTTP_NOT_FOUND);
         }
 
-        // Supprimer un film
-        $taskstitle->delete();
+        // On supprime la task
+        $task->delete();
 
-        return response()->json(['message' => 'Tasks deleted'], 200);
+        // Récupérer les informations de la requête
+        // Statut 204 : tâche a bien été supprimée (ou 200 acceptée)
+        return response()->json(null, SymfonyResponse::HTTP_NO_CONTENT);
     }
-
 }
